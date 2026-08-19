@@ -1,41 +1,46 @@
-## LLM-backed Community Post Reviewer
+## Corrected Project: Community Quest Moderator
 
-### Purpose
+The previous version was rejected because it only stored a single global verdict and did not include durable per-post records, moderation, eligibility, reward consequence, or explicit output parsing.
 
-This contract demonstrates a meaningful GenLayer use case by using an LLM-backed decision to review whether a community post is a valid GenLayer contribution.
+This corrected version adds a new contract:
 
-### Contract
+`contracts/community_quest_moderator.py`
 
-Contract file: contracts/community_post_reviewer.py  
-Contract name: CommunityPostReviewer  
+## Improvements
 
-### Workflow
+- Durable per-post records using submission IDs.
+- Explicit output parsing into structured fields:
+  - status
+  - score
+  - reward_points
+  - moderation
+  - reason
+- Eligibility decision:
+  - approved
+  - needs_revision
+  - rejected
+- Moderation decision:
+  - clean
+  - low_effort
+  - spam
+  - off_topic
+- Reward consequence:
+  - approved posts update author reward points.
+- Real community workflow:
+  - review a GenLayer Special Quest post.
+  - store the validated decision.
+  - allow users to query submission records and author points.
 
-1. A user submits a community post text to the contract.
-2. The contract asks an LLM to evaluate the post.
-3. Validators verify whether the LLM output satisfies the stated criteria.
-4. The accepted decision is stored in contract state.
-5. The decision can be read through `get_decision`.
+## Methods Tested
 
-### Methods Used
+- `review_submission`
+- `get_submission`
+- `get_author_points`
+- `get_next_submission_id`
 
-- `review_post`: write method that triggers the LLM-backed evaluation.
-- `get_reviewed_post`: read method that returns the submitted post.
-- `get_decision`: read method that returns the accepted review result.
+## Screenshots
 
-### Test Input
-
-GenLayer is building an AI-powered blockchain infrastructure for Intelligent Contracts.
-
-Unlike normal smart contracts that only execute fixed rules, GenLayer can use AI validators to reason about real-world information, language, and evidence.
-
-This can unlock use cases such as AI agent commerce, prediction markets, decentralized verification, and dispute resolution.
-
-### Result
-
-Decision result: APPROVED / REJECTED according to validator consensus.
-
-### Screenshots
-
-- screenshots/llm-review-deploy.png
-- screenshots/llm-review-decision.png
+- screenshots/moderator-deploy-finalized.png
+- screenshots/review-submission-finalized.png
+- screenshots/submission-record.png
+- screenshots/author-points.png
