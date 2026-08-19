@@ -1,15 +1,19 @@
-# genlayer-community-post-reviewer
-A GenLayer Intelligent Contract demo using an LLM-backed workflow to review community posts.
-## LLM-backed Community Post Reviewer
+## GenLayer Community Quest Moderator
 
-In addition to the basic Hello contract, this repository includes a more substantive GenLayer Intelligent Contract called `CommunityPostReviewer`.
+This repository includes a stronger GenLayer Intelligent Contract called `CommunityQuestModerator`.
 
-This contract demonstrates a meaningful LLM-backed decision workflow:
+The contract demonstrates a real community workflow for reviewing quest submissions:
 
-1. A user submits a community post.
-2. The contract asks an LLM to evaluate whether the post is a valid GenLayer community contribution.
-3. Validators verify the result against explicit criteria.
-4. The accepted decision is stored in contract state.
-5. The result can be read through `get_decision`.
+1. A user submits a community post with author, quest name, post URL, and post text.
+2. The contract uses an LLM-backed decision to evaluate the submission.
+3. Validators independently verify the decision using the same evidence and criteria.
+4. The result is parsed into explicit output fields:
+   - status
+   - score
+   - reward_points
+   - moderation
+   - reason
+5. Each post is stored as a durable per-submission record.
+6. Approved submissions update the author's internal reward points.
 
-This demonstrates how GenLayer can be used for community task review, AI-assisted adjudication, campaign validation, and subjective content evaluation.
+This project demonstrates GenLayer's value for subjective, language-based, and evidence-based community moderation workflows.
