@@ -1,46 +1,44 @@
-## Corrected Project: Community Quest Moderator
+## V3 Steward Request Fix
 
-The previous version was rejected because it only stored a single global verdict and did not include durable per-post records, moderation, eligibility, reward consequence, or explicit output parsing.
+This version addresses the steward request from Aug 21, 2026.
 
-This corrected version adds a new contract:
+### Fixes added
 
-`contracts/community_quest_moderator.py`
+1. Validator reruns the same moderation task:
+   - `validator_fn` now calls `leader_fn()` again.
+   - It compares stable decision fields instead of only validating structure.
 
-## Improvements
+2. Deterministic reward derivation:
+   - The LLM only returns `score`, `moderation`, and `reason`.
+   - The contract derives `status` and `reward_points` deterministically.
 
-- Durable per-post records using submission IDs.
-- Explicit output parsing into structured fields:
-  - status
-  - score
-  - reward_points
-  - moderation
-  - reason
-- Eligibility decision:
-  - approved
-  - needs_revision
-  - rejected
-- Moderation decision:
-  - clean
-  - low_effort
-  - spam
-  - off_topic
-- Reward consequence:
-  - approved posts update author reward points.
-- Real community workflow:
-  - review a GenLayer Special Quest post.
-  - store the validated decision.
-  - allow users to query submission records and author points.
+3. Consistency enforcement:
+   - Spam or off-topic content always becomes rejected.
+   - Low-effort content becomes needs_revision.
+   - Approved content must be clean and high-score.
+   - Reward points are only granted for approved clean submissions.
 
-## Methods Tested
+4. Repeat farming prevention:
+   - Duplicate `evidence_url` is blocked.
+   - Duplicate `author + quest_name` claim is blocked.
+
+5. Authorship and evidence binding:
+   - The contract fetches the actual `evidence_url`.
+   - The fetched evidence must include the submitted author and quest name.
+   - The contract no longer trusts caller-supplied post text.
+
+### Methods tested
 
 - `review_submission`
 - `get_submission`
 - `get_author_points`
 - `get_next_submission_id`
+- `is_evidence_reviewed`
 
-## Screenshots
+### Screenshots
 
-- screenshots/moderator-deploy-finalized.png
-- screenshots/review-submission-finalized.png
-- screenshots/submission-record.png
-- screenshots/author-points.png
+- screenshots/moderator-v3-deploy-finalized.png
+- screenshots/review-submission-v3-finalized.png
+- screenshots/submission-record-v3.png
+- screenshots/author-points-v3.png
+- screenshots/duplicate-prevention-v3.png
