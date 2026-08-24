@@ -1,31 +1,38 @@
-## CommunityQuestModerator V3
+## CommunityQuestModerator V4
 
-This corrected version addresses the steward request by improving the consensus and reward workflow.
+This version addresses the latest steward request by tightening source identity binding and duplicate prevention.
 
-### Key improvements
+### Key V4 improvements
 
-- Validators rerun the same moderation task instead of only checking the leader output format.
-- Validators compare stable decision fields:
+- Removed caller-supplied `author` from the contract workflow.
+- The contract now derives `source_identity` from the raw GitHub evidence URL.
+- Persistent points are assigned to the derived source identity, not to an unverified caller-provided author string.
+- The contract fetches the actual public evidence URL and validates the fetched content.
+- Validators independently refetch the same evidence and rerun the same moderation task.
+- Validators compare stable fields:
+  - source_identity
+  - canonical_url
+  - content_digest
   - moderation
   - derived status
   - derived reward points
   - score tolerance
-- Reward points are derived deterministically from the validated status and score.
-- The LLM no longer chooses reward points independently.
-- Each submission is stored as a durable per-submission record.
-- Repeated reward farming is prevented by checking:
-  - duplicate evidence URL
-  - duplicate author plus quest claim
-- The contract fetches the actual public evidence URL instead of trusting caller-supplied post text.
-- Authorship binding is enforced by requiring the fetched evidence to include the submitted author and quest name.
+- Reward points are derived deterministically from validated status, score, and moderation.
+- Duplicate farming is blocked by:
+  - canonical evidence URL
+  - evidence content digest
+  - source identity plus quest claim
+- The evidence file explains that the system does not claim real-world authorship. It binds the review to a source identity derived from the GitHub repository URL.
 
 ### Workflow
 
-1. The user submits an author, quest name, and public evidence URL.
-2. The contract fetches the evidence content from the URL.
-3. The LLM evaluates the fetched content and returns only score, moderation, and reason.
-4. The validator fetches the same evidence and reruns the same evaluation.
-5. The contract compares stable decision fields.
-6. The contract derives status and reward points deterministically.
-7. The result is stored in a durable submission record.
-8. Approved submissions update the author's internal reward points.
+1. A user submits a quest name and public raw GitHub evidence URL.
+2. The contract canonicalizes the URL.
+3. The contract derives a source identity from the URL.
+4. The contract fetches the evidence content.
+5. The LLM evaluates the fetched evidence.
+6. Validators refetch the same evidence and rerun the same evaluation.
+7. The contract compares stable decision fields.
+8. The contract derives status and reward points deterministically.
+9. The submission is stored as a durable record.
+10. Approved submissions update points for the derived source identity.
