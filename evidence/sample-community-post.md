@@ -1,7 +1,12 @@
 # GenLayer Community Quest Evidence
 
-AUTHOR: AnhDuong
 QUEST: GenLayer Community Special Quest
+
+This evidence file is hosted in the public GitHub repository used for this GenLayer project.
+
+The contract does not trust a caller-supplied author string. Instead, it derives the source identity from the raw GitHub evidence URL. For this repository, the derived source identity is:
+
+github:lam050/genlayer-community-post-reviewer
 
 GenLayer is building trust infrastructure for AI agents through Intelligent Contracts.
 
