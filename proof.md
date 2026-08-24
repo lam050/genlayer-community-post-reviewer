@@ -1,44 +1,58 @@
-## V3 Steward Request Fix
+## V4 Steward Request Fix
 
-This version addresses the steward request from Aug 21, 2026.
+This version addresses the latest steward request.
 
-### Fixes added
+### Authorship / source identity fix
 
-1. Validator reruns the same moderation task:
-   - `validator_fn` now calls `leader_fn()` again.
-   - It compares stable decision fields instead of only validating structure.
+The previous version checked whether the submitted author string appeared in the fetched content. This did not prove that the submitter actually owned or authored the evidence.
 
-2. Deterministic reward derivation:
-   - The LLM only returns `score`, `moderation`, and `reason`.
-   - The contract derives `status` and `reward_points` deterministically.
+V4 removes caller-supplied `author` from the workflow. The contract now derives a source identity directly from the raw GitHub evidence URL.
 
-3. Consistency enforcement:
-   - Spam or off-topic content always becomes rejected.
-   - Low-effort content becomes needs_revision.
-   - Approved content must be clean and high-score.
-   - Reward points are only granted for approved clean submissions.
+Example:
 
-4. Repeat farming prevention:
-   - Duplicate `evidence_url` is blocked.
-   - Duplicate `author + quest_name` claim is blocked.
+`https://raw.githubusercontent.com/lam050/genlayer-community-post-reviewer/main/evidence/sample-community-post.md`
 
-5. Authorship and evidence binding:
-   - The contract fetches the actual `evidence_url`.
-   - The fetched evidence must include the submitted author and quest name.
-   - The contract no longer trusts caller-supplied post text.
+becomes:
+
+`github:lam050/genlayer-community-post-reviewer`
+
+Persistent points are assigned to this derived source identity, not to an unverified author label.
+
+### Duplicate prevention fix
+
+V4 adds duplicate prevention using:
+
+- canonical evidence URL
+- content digest
+- source identity plus quest claim
+
+This prevents the same evidence from being reviewed repeatedly through query-string or URL aliases.
+
+### Consensus workflow
+
+Validators independently refetch the same evidence URL and rerun the same moderation task. The contract compares stable fields:
+
+- source_identity
+- canonical_url
+- content_digest
+- moderation
+- derived status
+- derived reward points
+- score tolerance
 
 ### Methods tested
 
 - `review_submission`
 - `get_submission`
-- `get_author_points`
+- `get_source_points`
+- `is_url_reviewed`
+- `is_content_digest_reviewed`
 - `get_next_submission_id`
-- `is_evidence_reviewed`
 
 ### Screenshots
 
-- screenshots/moderator-v3-deploy-finalized.png
-- screenshots/review-submission-v3-finalized.png
-- screenshots/submission-record-v3.png
-- screenshots/author-points-v3.png
-- screenshots/duplicate-prevention-v3.png
+- screenshots/moderator-v4-deploy-finalized.png
+- screenshots/review-submission-v4-finalized.png
+- screenshots/submission-record-v4.png
+- screenshots/source-points-v4.png
+- screenshots/url-reviewed-v4.png
