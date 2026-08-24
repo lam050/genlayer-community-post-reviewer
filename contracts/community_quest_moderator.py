@@ -6,12 +6,48 @@ from genlayer import *
 class CommunityQuestModerator(gl.Contract):
     next_submission_id: u32
     submissions: TreeMap[str, str]
-    author_points: TreeMap[str, u32]
-    reviewed_evidence: TreeMap[str, str]
-    author_quest_claims: TreeMap[str, str]
+    source_points: TreeMap[str, u32]
+    reviewed_canonical_urls: TreeMap[str, str]
+    reviewed_content_digests: TreeMap[str, str]
+    source_quest_claims: TreeMap[str, str]
 
     def __init__(self):
         self.next_submission_id = u32(1)
+
+    def _canonicalize_url(self, evidence_url: str) -> str:
+        clean_url = evidence_url.strip()
+        clean_url = clean_url.split("#")[0]
+        clean_url = clean_url.split("?")[0]
+        return clean_url
+
+    def _source_identity_from_url(self, canonical_url: str) -> str:
+        prefix = "https://raw.githubusercontent.com/"
+
+        if not canonical_url.startswith(prefix):
+            raise gl.UserError("Evidence URL must be a raw GitHub content URL.")
+
+        path = canonical_url[len(prefix):]
+        parts = path.split("/")
+
+        if len(parts) < 4:
+            raise gl.UserError("Raw GitHub URL must include owner, repo, branch, and file path.")
+
+        owner = parts[0].lower()
+        repo = parts[1].lower()
+
+        return "github:" + owner + "/" + repo
+
+    def _source_quest_key(self, source_identity: str, quest_name: str) -> str:
+        return source_identity.strip().lower() + "|" + quest_name.strip().lower()
+
+    def _content_digest(self, content: str) -> str:
+        h = 2166136261
+
+        for ch in content:
+            h = h ^ ord(ch)
+            h = (h * 16777619) % 4294967296
+
+        return str(h) + ":" + str(len(content))
 
     def _derive_status(self, score: int, moderation: str) -> str:
         moderation = str(moderation).lower()
@@ -48,16 +84,28 @@ class CommunityQuestModerator(gl.Contract):
 
         return u32(50)
 
-    def _validate_llm_decision(self, data) -> bool:
+    def _validate_decision(self, data) -> bool:
         if not isinstance(data, dict):
             return False
 
         moderation = str(data.get("moderation", "")).lower()
         reason = str(data.get("reason", ""))
+        source_identity = str(data.get("source_identity", ""))
+        canonical_url = str(data.get("canonical_url", ""))
+        content_digest = str(data.get("content_digest", ""))
 
         try:
             score = int(data.get("score", -1))
         except Exception:
+            return False
+
+        if not source_identity.startswith("github:"):
+            return False
+
+        if not canonical_url.startswith("https://raw.githubusercontent.com/"):
+            return False
+
+        if ":" not in content_digest:
             return False
 
         if moderation not in ["clean", "low_effort", "spam", "off_topic"]:
@@ -71,56 +119,48 @@ class CommunityQuestModerator(gl.Contract):
 
         return True
 
-    def _normalize_evidence_key(self, evidence_url: str) -> str:
-        return evidence_url.strip().lower()
-
-    def _author_quest_key(self, author: str, quest_name: str) -> str:
-        return author.strip().lower() + "|" + quest_name.strip().lower()
-
     @gl.public.write
     def review_submission(
         self,
-        author: str,
         quest_name: str,
         evidence_url: str
     ) -> u32:
-        evidence_key = self._normalize_evidence_key(evidence_url)
-        author_key = self._author_quest_key(author, quest_name)
+        canonical_url = self._canonicalize_url(evidence_url)
+        source_identity = self._source_identity_from_url(canonical_url)
+        source_quest_key = self._source_quest_key(source_identity, quest_name)
 
-        if self.reviewed_evidence.get(evidence_key, "") == "reviewed":
-            raise gl.UserError("This evidence URL has already been reviewed.")
+        if self.reviewed_canonical_urls.get(canonical_url.lower(), "") == "reviewed":
+            raise gl.UserError("This canonical evidence URL has already been reviewed.")
 
-        if self.author_quest_claims.get(author_key, "") == "claimed":
-            raise gl.UserError("This author has already claimed this quest.")
+        if self.source_quest_claims.get(source_quest_key, "") == "claimed":
+            raise gl.UserError("This source identity has already claimed this quest.")
 
         submission_id = self.next_submission_id
 
         def leader_fn():
-            response = gl.nondet.web.get(evidence_url)
+            response = gl.nondet.web.get(canonical_url)
             evidence_text = response.body.decode("utf-8")
 
-            if len(evidence_text) < 80:
+            if len(evidence_text) < 120:
                 raise gl.UserError("Evidence content is too short.")
-
-            if author.lower() not in evidence_text.lower():
-                raise gl.UserError("Evidence does not include the submitted author.")
 
             if quest_name.lower() not in evidence_text.lower():
                 raise gl.UserError("Evidence does not include the submitted quest name.")
 
+            fetched_digest = self._content_digest(evidence_text)
+            fetched_source_identity = self._source_identity_from_url(canonical_url)
+
             prompt = f"""
 You are reviewing a GenLayer community quest submission.
 
-The evidence below was fetched from a public evidence URL by the contract.
+The contract fetched the evidence from this public URL:
+{canonical_url}
 
-Author:
-{author}
+The source identity is derived from the raw GitHub URL:
+{fetched_source_identity}
 
 Quest name:
 {quest_name}
-
-Evidence URL:
-{evidence_url}
 
 Fetched evidence content:
 {evidence_text}
@@ -134,18 +174,25 @@ Return ONLY a JSON object with exactly these keys:
 
 Evaluation rules:
 - High score requires a clear explanation of GenLayer or Intelligent Contracts.
-- High score requires at least one relevant use case such as AI agents, dispute resolution, prediction markets, decentralized verification, or community moderation.
+- High score requires at least one relevant use case such as AI agents, dispute resolution, prediction markets, decentralized verification, community moderation, or evidence-based adjudication.
 - "clean" means useful and relevant.
 - "low_effort" means related but too vague or incomplete.
 - "spam" means promotional spam, airdrop farming spam, or meaningless content.
 - "off_topic" means not about GenLayer or relevant use cases.
 """
-            decision = gl.nondet.exec_prompt(prompt, response_format="json")
+            llm_decision = gl.nondet.exec_prompt(prompt, response_format="json")
 
-            if not isinstance(decision, dict):
+            if not isinstance(llm_decision, dict):
                 raise gl.UserError("LLM did not return a JSON object.")
 
-            return decision
+            return {
+                "source_identity": fetched_source_identity,
+                "canonical_url": canonical_url,
+                "content_digest": fetched_digest,
+                "score": llm_decision.get("score"),
+                "moderation": llm_decision.get("moderation"),
+                "reason": llm_decision.get("reason")
+            }
 
         def validator_fn(leader_result) -> bool:
             if not isinstance(leader_result, gl.vm.Return):
@@ -153,12 +200,12 @@ Evaluation rules:
 
             leader_decision = leader_result.calldata
 
-            if not self._validate_llm_decision(leader_decision):
+            if not self._validate_decision(leader_decision):
                 return False
 
             validator_decision = leader_fn()
 
-            if not self._validate_llm_decision(validator_decision):
+            if not self._validate_decision(validator_decision):
                 return False
 
             leader_score = int(leader_decision["score"])
@@ -172,6 +219,15 @@ Evaluation rules:
 
             leader_reward = int(self._derive_reward_points(leader_status, leader_score, leader_moderation))
             validator_reward = int(self._derive_reward_points(validator_status, validator_score, validator_moderation))
+
+            if leader_decision["source_identity"] != validator_decision["source_identity"]:
+                return False
+
+            if leader_decision["canonical_url"] != validator_decision["canonical_url"]:
+                return False
+
+            if leader_decision["content_digest"] != validator_decision["content_digest"]:
+                return False
 
             if leader_moderation != validator_moderation:
                 return False
@@ -192,15 +248,22 @@ Evaluation rules:
         score = int(decision["score"])
         moderation = str(decision["moderation"]).lower()
         reason = str(decision["reason"])
+        final_source_identity = str(decision["source_identity"])
+        final_canonical_url = str(decision["canonical_url"])
+        final_content_digest = str(decision["content_digest"])
+
+        if self.reviewed_content_digests.get(final_content_digest, "") == "reviewed":
+            raise gl.UserError("This evidence content has already been reviewed.")
 
         status = self._derive_status(score, moderation)
         reward_points = self._derive_reward_points(status, score, moderation)
 
         record = (
             "submission_id=" + str(submission_id) + "\n"
-            + "author=" + author + "\n"
+            + "source_identity=" + final_source_identity + "\n"
             + "quest_name=" + quest_name + "\n"
-            + "evidence_url=" + evidence_url + "\n"
+            + "canonical_url=" + final_canonical_url + "\n"
+            + "content_digest=" + final_content_digest + "\n"
             + "status=" + status + "\n"
             + "score=" + str(score) + "\n"
             + "reward_points=" + str(reward_points) + "\n"
@@ -209,12 +272,13 @@ Evaluation rules:
         )
 
         self.submissions[str(submission_id)] = record
-        self.reviewed_evidence[evidence_key] = "reviewed"
-        self.author_quest_claims[author_key] = "claimed"
+        self.reviewed_canonical_urls[final_canonical_url.lower()] = "reviewed"
+        self.reviewed_content_digests[final_content_digest] = "reviewed"
+        self.source_quest_claims[source_quest_key] = "claimed"
 
         if status == "approved":
-            current_points = self.author_points.get(author, u32(0))
-            self.author_points[author] = u32(int(current_points) + int(reward_points))
+            current_points = self.source_points.get(final_source_identity, u32(0))
+            self.source_points[final_source_identity] = u32(int(current_points) + int(reward_points))
 
         self.next_submission_id = u32(int(self.next_submission_id) + 1)
 
@@ -225,14 +289,18 @@ Evaluation rules:
         return self.submissions.get(str(submission_id), "Submission not found")
 
     @gl.public.view
-    def get_author_points(self, author: str) -> u32:
-        return self.author_points.get(author, u32(0))
+    def get_source_points(self, source_identity: str) -> u32:
+        return self.source_points.get(source_identity, u32(0))
 
     @gl.public.view
     def get_next_submission_id(self) -> u32:
         return self.next_submission_id
 
     @gl.public.view
-    def is_evidence_reviewed(self, evidence_url: str) -> str:
-        evidence_key = self._normalize_evidence_key(evidence_url)
-        return self.reviewed_evidence.get(evidence_key, "not_reviewed")
+    def is_url_reviewed(self, evidence_url: str) -> str:
+        canonical_url = self._canonicalize_url(evidence_url)
+        return self.reviewed_canonical_urls.get(canonical_url.lower(), "not_reviewed")
+
+    @gl.public.view
+    def is_content_digest_reviewed(self, content_digest: str) -> str:
+        return self.reviewed_content_digests.get(content_digest, "not_reviewed")
