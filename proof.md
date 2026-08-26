@@ -56,3 +56,30 @@ Validators independently refetch the same evidence URL and rerun the same modera
 - screenshots/submission-record-v4.png
 - screenshots/source-points-v4.png
 - screenshots/url-reviewed-v4.png
+
+## Product Usage Clarification
+
+The steward asked how people use this product.
+
+This project is designed to be used as a decision layer inside a community quest platform.
+
+The workflow is:
+
+user submits evidence -> GenLayer contract reviews evidence -> validators reassess evidence -> contract stores result -> platform applies reward or moderation logic
+
+The product is not a full quest app by itself. It is a verification module that a frontend or backend can call before granting XP, badges, leaderboard points, or approving a submission.
+
+The platform can use the contract output to:
+
+- approve a submission
+- reject a submission
+- request revision
+- assign XP or badge eligibility
+- update a leaderboard
+- prevent duplicate reward farming
+- flag spam or off-topic submissions
+
+Added documentation:
+
+- docs/product-usage.md
+- examples/quest-platform-workflow.md
