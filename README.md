@@ -2,6 +2,27 @@
 
 This version addresses the latest steward request by tightening source identity binding and duplicate prevention.
 
+## How people use this product
+
+GenLayer Community Quest Moderator is used as a decision layer for community quest platforms.
+
+It is not a standalone app and it is not something that is randomly attached to any product. It is integrated into the point where a platform needs to review a user's quest evidence before giving XP, badges, leaderboard points, or moderation results.
+
+A typical workflow is:
+
+1. A quest platform creates a campaign.
+2. A participant submits a public evidence URL.
+3. The platform calls `review_submission`.
+4. The GenLayer contract fetches and reviews the evidence.
+5. Validators independently reassess the same evidence.
+6. The contract stores a structured decision.
+7. The platform reads the decision using `get_submission`.
+8. The platform uses the result to approve, reject, request revision, give XP, issue a badge, or update a leaderboard.
+
+More details:
+
+- `docs/product-usage.md`
+- `examples/quest-platform-workflow.md`
 ### Key V4 improvements
 
 - Removed caller-supplied `author` from the contract workflow.
