@@ -1,52 +1,104 @@
-# Product Usage: GenLayer Community Quest Moderator
+# Product Usage
 
 ## What is this product?
 
-GenLayer Community Quest Moderator is a reusable adjudication module for community quest platforms.
+GenLayer Community Quest Moderator is a verification layer for community quest platforms.
 
-It is designed to sit between a user's submitted evidence and the final reward or leaderboard update.
+It helps a platform review user-submitted evidence before giving rewards, XP, badges, leaderboard points, or moderation results.
 
-It is not meant to be randomly "latched onto" every application. Instead, it is used as a verification checkpoint for workflows where a community team needs to decide whether a submitted post, proof, or quest entry should be approved, rejected, or sent back for revision.
+This product is not meant to be randomly attached to any app. It is used at the exact point where a platform needs to decide whether a submission should be approved, rejected, or revised.
 
 ## Who uses it?
 
 There are three main users:
 
 1. Quest organizers  
-   Community teams, campaign managers, or ecosystem programs that need to review submissions.
+They create campaigns and define what counts as a valid submission.
 
 2. Participants  
-   Users who submit public evidence for a quest, such as a GitHub evidence file, social post, article, tutorial, or campaign proof.
+They submit public evidence for a quest, such as a GitHub evidence file, article, tutorial, or social post.
 
-3. Frontend or backend integrators  
-   Quest platforms, dashboards, or campaign apps that call the contract, read the decision, and update their own UI, leaderboard, badge, or reward system.
+3. Quest platforms or dashboards  
+They call the GenLayer contract, read the decision, and update their own reward, badge, or leaderboard system.
 
-## Where does it fit in a product workflow?
+## How does the workflow work?
 
-The contract is used after a participant submits evidence and before a reward is granted.
+The intended workflow is:
 
-Typical flow:
+1. A quest platform creates a campaign.
+2. A participant submits a public evidence URL.
+3. The platform calls the GenLayer contract.
+4. The contract fetches and reviews the evidence.
+5. Validators independently reassess the same evidence.
+6. The contract stores a structured decision.
+7. The platform reads the result.
+8. The platform applies product logic such as approval, rejection, revision request, XP, badge, or leaderboard update.
 
-1. A campaign defines a quest and evidence format.
-2. A participant creates public evidence.
-3. The quest platform submits the quest name and evidence URL to the contract.
-4. The contract fetches the public evidence.
-5. The LLM evaluates the evidence.
-6. Validators independently refetch the same evidence and reassess the result.
-7. The contract stores a durable decision record.
-8. The frontend or backend reads the result.
-9. The platform uses the result to approve, reject, request revision, update points, issue a badge, or update a leaderboard.
-
-## What does the contract take as input?
+## Contract input
 
 The contract takes:
 
-- `quest_name`: the name of the quest being reviewed.
-- `evidence_url`: a public raw GitHub evidence URL.
+- quest_name
+- evidence_url
 
-The contract does not trust a caller-supplied author string. Instead, it derives a source identity from the evidence URL.
+The contract does not trust a user-provided author name. It derives a source identity from the raw GitHub evidence URL.
 
 Example:
 
-```text
 https://raw.githubusercontent.com/lam050/genlayer-community-post-reviewer/main/evidence/sample-community-post.md
+
+becomes:
+
+github:lam050/genlayer-community-post-reviewer
+
+## Contract output
+
+Each reviewed submission creates a record with:
+
+- submission_id
+- source_identity
+- quest_name
+- canonical_url
+- content_digest
+- status
+- score
+- reward_points
+- moderation
+- reason
+
+## How a platform uses the result
+
+A frontend or backend can use the contract result like this:
+
+- approved: mark the quest as completed and grant XP or badge eligibility
+- needs_revision: ask the user to improve the submission
+- rejected: reject the submission and show the reason
+- spam or off_topic: flag the submission
+- duplicate URL or content digest: prevent repeated reward farming
+
+## Example use cases
+
+This project can be used for:
+
+- community quest review
+- campaign proof verification
+- ambassador task moderation
+- tutorial or article quality checks
+- hackathon submission screening
+- leaderboard point validation
+- duplicate submission prevention
+
+## What this product is not
+
+This contract is not a full quest platform by itself.
+
+An integrating platform still needs:
+
+- a user interface
+- user accounts
+- campaign rules
+- reward logic
+- badge or leaderboard system
+- a backend or frontend that reads the contract decision
+
+The contract provides the GenLayer-based decision layer.
