@@ -42,13 +42,13 @@ class CommunityQuestModerator(gl.Contract):
         prefix = "https://raw.githubusercontent.com/"
 
         if not canonical_url.startswith(prefix):
-            raise gl.UserError("Evidence URL must be a raw GitHub content URL.")
+           raise Exception("Evidence URL must be a raw GitHub content URL.")
 
         path = canonical_url[len(prefix):]
         parts = path.split("/")
 
         if len(parts) < 5:
-            raise gl.UserError("Raw GitHub URL must include owner, repo, commit hash, and file path.")
+          raise Exception("Raw GitHub URL must include owner, repo, commit hash, and file path.")
 
         owner = parts[0].lower()
         repo = parts[1].lower()
@@ -56,7 +56,7 @@ class CommunityQuestModerator(gl.Contract):
         file_path = "/".join(parts[3:])
 
         if not self._is_40_hex(commit_hash):
-            raise gl.UserError("Evidence URL must be pinned to a 40-character Git commit hash, not a branch name.")
+            raise Exception("Evidence URL must be pinned to a 40-character Git commit hash, not a branch name.")
 
         return {
             "owner": owner,
@@ -137,7 +137,7 @@ class CommunityQuestModerator(gl.Contract):
         evidence_url: str
     ) -> u32:
         if not self._is_allowed_quest(quest_name):
-            raise gl.UserError("Unsupported quest name.")
+           raise Exception("Unsupported quest name.")
 
         canonical_url = self._canonicalize_url(evidence_url)
         parsed_url = self._parse_raw_github_url(canonical_url)
@@ -146,7 +146,7 @@ class CommunityQuestModerator(gl.Contract):
         source_quest_key = self._source_quest_key(source_identity, quest_name)
 
         if self.reviewed_canonical_urls.get(canonical_url.lower(), "") == "reviewed":
-            raise gl.UserError("This canonical evidence URL has already been reviewed.")
+           raise Exception("This canonical evidence URL has already been reviewed.")
 
         submission_id = self.next_submission_id
 
@@ -156,10 +156,10 @@ class CommunityQuestModerator(gl.Contract):
             content_digest = self._sha256_digest(evidence_text)
 
             if len(evidence_text) < 120:
-                raise gl.UserError("Evidence content is too short.")
+                raise Exception("Evidence content is too short.")
 
             if quest_name.lower() not in evidence_text.lower():
-                raise gl.UserError("Evidence does not include the quest name.")
+                raise Exception("Evidence does not include the quest name.")
 
             prompt = f"""
 SYSTEM INSTRUCTIONS:
@@ -202,7 +202,7 @@ Judging rules:
             llm_decision = gl.nondet.exec_prompt(prompt, response_format="json")
 
             if not isinstance(llm_decision, dict):
-                raise gl.UserError("LLM did not return a JSON object.")
+                raise Exception("LLM did not return a JSON object.")
 
             return {
                 "source_identity": source_identity,
@@ -277,7 +277,7 @@ Judging rules:
         final_content_digest = str(decision["content_digest"])
 
         if self.reviewed_content_digests.get(final_content_digest, "") == "reviewed":
-            raise gl.UserError("This evidence content has already been reviewed.")
+            raise Exception("This evidence content has already been reviewed.")
 
         score = int(decision["score"])
         moderation = str(decision["moderation"]).lower()
