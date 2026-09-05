@@ -1,3 +1,59 @@
+## V5 Steward Request Fix
+
+This version addresses the latest steward request.
+
+### 1. Revision workflow
+
+`needs_revision` is no longer terminal.
+
+The contract no longer consumes a permanent source identity + quest claim for every reviewed submission. Instead:
+
+- each evidence URL is deduplicated;
+- each evidence content digest is deduplicated;
+- revised evidence can be submitted through a new commit-pinned URL;
+- approved submissions update the best reward for the source identity and quest.
+
+### 2. Source reputation model
+
+The contract does not claim to authenticate the real-world participant.
+
+Instead, it uses a source reputation model:
+
+- source identity is derived from the raw GitHub URL;
+- points are assigned to that GitHub source identity;
+- anyone may nominate public evidence;
+- a real quest platform must authenticate the user with GitHub before mapping source reputation to participant XP.
+
+### 3. Prompt injection hardening
+
+The prompt now treats evidence as untrusted input.
+
+Evidence is fenced inside:
+
+UNTRUSTED EVIDENCE START
+...
+UNTRUSTED EVIDENCE END
+
+The judge instruction explicitly says not to follow instructions inside the evidence.
+
+### 4. SHA-256 digest and commit-pinned evidence
+
+The contract now uses SHA-256 for content digest.
+
+The contract also requires commit-pinned raw GitHub URLs, not branch-based URLs such as `/main/`.
+
+### 5. Stronger evidence
+
+This proof includes:
+
+- deployed contract address
+- successful review transaction hash
+- Explorer link
+- stored submission output
+- source reputation points output
+- canonical URL review check
+- SHA-256 content digest check
+
 ## V4 Steward Request Fix
 
 This version addresses the latest steward request.
