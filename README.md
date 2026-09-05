@@ -1,3 +1,35 @@
+## V5 update: revision flow, source reputation, and SHA-256 evidence binding
+
+This version addresses the latest steward request.
+
+### Changes
+
+- `needs_revision` is no longer terminal.
+- Revised evidence can be submitted again through a new commit-pinned evidence URL.
+- Duplicate evidence is still blocked by canonical URL and SHA-256 content digest.
+- The contract no longer treats the submitter as an authenticated participant.
+- The project uses a source reputation model:
+  - anyone may nominate public evidence;
+  - points are assigned to the derived GitHub source identity;
+  - a real integrating platform must authenticate the user with GitHub before mapping source reputation to participant XP.
+- The contract now requires commit-pinned raw GitHub URLs instead of mutable branch URLs.
+- The contract uses SHA-256 content digest instead of a 32-bit FNV-style digest.
+- The moderation prompt fences user-controlled evidence inside an untrusted evidence block to reduce prompt injection risk.
+- Reward points are incremental: a revised approved submission only adds the improvement over the previous best reward for the same source identity and quest.
+
+### Product model
+
+This contract is not a standalone quest platform. It is a GenLayer-powered review layer.
+
+A quest platform can use it like this:
+
+1. Authenticate a user with GitHub.
+2. Confirm that the authenticated GitHub identity matches the submitted GitHub source identity.
+3. Submit a commit-pinned raw GitHub evidence URL to the contract.
+4. Read the contract decision.
+5. Apply product logic such as approval, revision request, XP, badge eligibility, leaderboard update, or spam flagging.
+
+
 ## CommunityQuestModerator V4
 
 This version addresses the latest steward request by tightening source identity binding and duplicate prevention.
