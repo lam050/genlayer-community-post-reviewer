@@ -102,3 +102,29 @@ An integrating platform still needs:
 - a backend or frontend that reads the contract decision
 
 The contract provides the GenLayer-based decision layer.
+
+## Authentication and source identity
+
+This demo does not claim to authenticate the real-world user inside the contract.
+
+The contract derives a GitHub source identity from the commit-pinned raw GitHub evidence URL.
+
+This means the contract works as a source reputation system, not as a direct participant XP system.
+
+Anyone can nominate public evidence, but reputation points are assigned to the source identity represented by the GitHub repository.
+
+In a production quest platform, the frontend or backend must authenticate the user with GitHub OAuth and confirm that the authenticated user controls the GitHub source identity before converting contract reputation into user XP, badges, or leaderboard points.
+
+## Revision behavior
+
+A result of `needs_revision` is not terminal.
+
+The participant can improve the evidence and submit a new commit-pinned raw GitHub URL. The previous evidence remains recorded and deduplicated, but it does not permanently consume the source identity plus quest claim.
+
+Approved submissions update the best reward for that source identity and quest. Revisions only add incremental reward if the new approved result is better than the previous best result.
+
+## Evidence immutability
+
+The contract requires commit-pinned raw GitHub URLs. This avoids mutable branch URLs such as `/main/`, where the file content could change after review.
+
+The contract also stores a SHA-256 content digest so the reviewed content can be identified and duplicate submissions can be blocked.
