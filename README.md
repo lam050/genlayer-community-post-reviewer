@@ -1,3 +1,40 @@
+# GenLayer Community Quest Moderator V5
+
+## SDK integration proof
+
+This project includes a minimal SDK integration example to show how a real quest platform can consume the contract end to end.
+
+Files added:
+
+- `examples/sdk-review-submission.ts`
+- `examples/sdk-integration.md`
+
+
+The SDK example demonstrates the full product flow:
+
+1. Create a GenLayer client.
+2. Call `review_submission(quest_name, evidence_url)`.
+3. Wait for successful finalization.
+4. Check transaction success.
+5. Read the result with `get_submission(1)`.
+6. Use the returned decision record in a quest platform, backend, frontend, or campaign dashboard.
+
+This clarifies that the project is a headless GenLayer decision layer. It is not intended to be a standalone frontend app.
+
+A real platform can use this contract to:
+
+- review evidence
+- approve submissions
+- reject submissions
+- request revisions
+- assign XP
+- issue badges
+- update leaderboards
+- prevent duplicate reward farming
+- flag spam or off-topic evidence
+
+---
+
 ## V5 update: revision flow, source reputation, and SHA-256 evidence binding
 
 This version addresses the latest steward request.
