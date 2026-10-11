@@ -139,3 +139,59 @@ Added documentation:
 
 - docs/product-usage.md
 - examples/quest-platform-workflow.md
+
+## SDK Integration Proof
+
+The steward requested a minimal integration proof showing how a real quest platform consumes the contract end to end.
+
+I added the following files:
+
+- `examples/sdk-review-submission.ts`
+- `examples/sdk-integration.md`
+
+The SDK example demonstrates this flow:
+
+1. Create a GenLayer client.
+2. Call `review_submission(quest_name, evidence_url)`.
+3. Wait for transaction finalization.
+4. Check transaction success.
+5. Read the resulting record with `get_submission(1)`.
+
+This shows how a frontend, backend, quest platform, or campaign dashboard can use the contract as a headless GenLayer decision layer.
+
+The platform can then use the returned fields to:
+
+- approve a submission
+- reject a submission
+- request revision
+- assign XP or badges
+- update a leaderboard
+- prevent duplicate reward farming
+- flag spam or off-topic evidence
+## Integration Flow
+
+The intended integration flow is:
+
+```text
+User submits public evidence
+→ Platform calls review_submission
+→ GenLayer contract reviews the evidence
+→ Validators reassess the evidence
+→ Contract stores a structured decision
+→ Platform calls get_submission
+→ Platform applies product logic
+```
+
+## Product Usage
+
+The contract does not need to be a standalone frontend app.
+
+It is designed to be consumed by another product, such as:
+
+- a quest platform
+- a campaign dashboard
+- a community moderation tool
+- a leaderboard backend
+- a badge or XP system
+
+The SDK example demonstrates how that consuming product can call the contract and use the returned decision record.
